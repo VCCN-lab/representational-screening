@@ -6,6 +6,9 @@ from sklearn.metrics.pairwise import euclidean_distances
 import lib.utils_RSA as rsa
 import seaborn as sns
 
+#SCORING_FUNCTIONS_CLUSTERING = {"score1": fun1, "score2": fun2}
+
+
 
 def compute_compactness(cat_activations, models, listcat, measure = 'Fisher_discriminant'):
     """
@@ -19,43 +22,78 @@ def compute_compactness(cat_activations, models, listcat, measure = 'Fisher_disc
     for model in models:
         print(model)
         n_cats = len(cat_activations[model])
+        #scoring_fun_choisie = SCORING_FUNCTIONS_CLUSTERING[measure]
+        #scoring_result = scoring_fun_choisie(x, y, nom_modele, liscat)
+
         if measure == 'Fisher_discriminant':
             # Pre-compute centroids
             centroids = np.array([np.mean(cat_act, axis=0) for cat_act in cat_activations[model]])
 
             # Compute metrics using generator expressions to save memory
-            intra_vars = np.array([
-                np.mean((cat_activations[model][i] - centroids[i])**2)
+            inter_vars = np.array([
+                np.mean(np.sum((cat_activations[model][i] - centroids[i])**2, axis =-1))
                 for i in range(n_cats)
             ])
 
-            inter_vars = np.array([
+            intra_vars = np.array([
                 np.mean([
-                    np.mean((cat_activations[model][j] - centroids[i])**2)
+                    np.mean(np.sum((cat_activations[model][j] - centroids[i])**2, axis =-1))
                     for j in range(n_cats) if j != i
                 ])
                 for i in range(n_cats)
             ])
 
             # Compute normalized variances
-            compact = intra_vars / inter_vars
+            compact = 1-inter_vars / intra_vars
 
-        elif measure == 'silhouette_score':
+        elif measure == 'CH_Index':
+            # Pre-compute centroids
+            center = np.mean(cat_activations[model], axis=(0,1))
+            centroids = np.array([np.mean(cat_act, axis=0) for cat_act in cat_activations[model]])
+
+            # Compute metrics using generator expressions to save memory
+            inter_vars = np.array([
+                np.mean(np.sum((cat_activations[model][i] - centroids[i])**2, axis =-1))
+                for i in range(n_cats)
+            ])
+
+            distance2center = np.sum((centroids - center)**2, axis =-1)
+
+            # Compute normalized variances
+            compact =  distance2center / inter_vars
+
+        elif measure == 'CH_Index_adapted':
+            # Pre-compute centroids
+            center = np.mean(cat_activations[model], axis=(0,1))
+            centroids = np.array([np.mean(cat_act, axis=0) for cat_act in cat_activations[model]])
+
+            # Compute metrics using generator expressions to save memory
+            inter_vars = np.array([
+                np.mean(np.sum((cat_activations[model][i] - centroids[i])**2, axis =-1))
+                for i in range(n_cats)
+            ])
+
+            distance2center = np.sum((centroids - center)**2, axis =-1)
+
+            # Compute normalized variances
+            compact =  1 - inter_vars / distance2center
+
+        elif measure == 'global_silhouette_score':
             compact = []
 
             for i in range(n_cats):
                 current_cat = cat_activations[model][i]
 
-                # Compute intra-category distances
+                # Compute within-category distances
                 if len(current_cat) > 1:
                     # Use sklearn's optimized euclidean_distances with squared option
                     intra_dist_matrix = euclidean_distances(current_cat, current_cat, squared=True)
                     # Get upper triangle (excluding diagonal) to avoid counting pairs twice
                     mask = np.triu(np.ones_like(intra_dist_matrix, dtype=bool), k=1)
                     intra_distances = intra_dist_matrix[mask]
-                    mean_intra_distance = np.mean(intra_distances)
+                    mean_within_distance = np.mean(intra_distances)
 
-                # Compute inter-category distances in batches to save memory
+                # Compute between-category distances in batches to save memory
                 inter_distances_sum = 0.0
                 inter_count = 0
 
@@ -68,39 +106,105 @@ def compute_compactness(cat_activations, models, listcat, measure = 'Fisher_disc
                         inter_distances_sum += np.sum(distances)
                         inter_count += distances.size
 
-                mean_inter_distance = inter_distances_sum / inter_count if inter_count > 0 else 1.0
+                mean_between_distance = inter_distances_sum / inter_count if inter_count > 0 else 1.0
 
                 # Compactness ratio: lower is better (tight within, far between)
-                compactness_ratio = mean_intra_distance / mean_inter_distance
-                compact.append(compactness_ratio)
+                silhouette = (mean_between_distance - mean_within_distance)/np.amax(mean_between_distance, mean_within_distance)
+                compact.append(silhouette)
 
             compact = np.array(compact)
+        elif measure == 'silhouette_score':
+            compact = []
+
+            for i in range(n_cats):
+                current_cat = cat_activations[model][i]
+
+                # Compute within-category distances
+                if len(current_cat) > 1:
+                    # Use sklearn's optimized euclidean_distances with squared option
+                    intra_dist_matrix = euclidean_distances(current_cat, current_cat, squared=True)
+                    # Get upper triangle (excluding diagonal) to avoid counting pairs twice
+                    mask = np.triu(np.ones_like(intra_dist_matrix, dtype=bool), k=1)
+                    intra_distances = intra_dist_matrix[mask]
+                    mean_within_distance = np.mean(intra_distances)
+
+                # Compute between-category distances in batches to save memory
+                inter_distances_sum = []
+                inter_count = 0
+
+                for j in range(n_cats):
+                    if i != j:
+                        other_cat = cat_activations[model][j]
+                        # Use sklearn's optimized euclidean_distances with squared option
+                        distances = euclidean_distances(current_cat, other_cat, squared=True)
+
+                        inter_distances_sum.append(np.mean(distances)) # save average distances for min
+
+                mean_between_distance = np.amin(np.array(inter_distances_sum)) # avereage distance of nearby cluster
+
+                # Compactness ratio: lower is better (tight within, far between)
+                silhouette = (mean_between_distance - mean_within_distance)/np.amax(mean_between_distance, mean_within_distance)
+                compact.append(silhouette)
+
+            compact = np.array(compact)
+
+        elif measure == 'simplified_silhouette_score':
+            compact = []
+            # Pre-compute centroids
+            centroids = np.array([np.mean(cat_act, axis=0) for cat_act in cat_activations[model]])
+
+            # Compute metrics using generator expressions to save memory
+            inter_vars = np.array([
+                np.mean(np.sum((cat_activations[model][i] - centroids[i]) ** 2, axis=-1))
+                for i in range(n_cats)
+            ])
+
+            intra_vars = np.array([
+                np.min([ np.sum((centroids[j] - centroids[i]) ** 2, axis=-1)
+                    for j in range(n_cats) if j != i
+                ])
+                for i in range(n_cats)
+            ])
+
+            compact = (intra_vars - inter_vars) / np.amax((intra_vars, inter_vars), axis = 0)
 
         elif measure == "Davies-Bouldin_Index":
             centroids = np.array([np.mean(cat_act, axis=0) for cat_act in cat_activations[model]])
 
-            # Compute metrics using generator expressions to save memory
-            intra_vars = np.array([
-                np.mean((cat_activations[model][i] - centroids[i]) ** 2)
+            # Distance within categoreis to centroid
+            inter_vars = np.array([
+                np.mean(np.sum((cat_activations[model][i] - centroids[i]) ** 2, axis=-1))
                 for i in range(n_cats)
             ])
 
-            ### Distance between clusters
-            inter_centroids = sklearn.metrics.euclidean_distances(centroids, squared=True)
+            # Distance between centroids
+            intra_dist_matrix = euclidean_distances(centroids, centroids, squared=True)
 
-            ### Nearest cluseter for each cluster
-            nearest_cluster = list()
-            for i in range(len(inter_centroids)):
-                listidx = np.array(range(len(inter_centroids)))
-                mask = listidx != i  # exclude the diagonal
-                nearest_cluster.append(np.argmin(inter_centroids[i][mask]))
-            nearest_cluster = np.array(nearest_cluster)
+            compact = []
+            for i in range(n_cats):
+                DB = []
+                for j in range(n_cats):
+                    if i != j:
+                        DB.append((inter_vars[i] + inter_vars[j])/intra_dist_matrix[i,j])
+                compact.append(max(DB)) # we take the maximum
+            compact = np.array(compact)
 
-            inter_vars = np.array([
-                np.mean((cat_activations[model][nearest_cluster[i]] - centroids[i]) ** 2) for i in range(n_cats)
-            ])
+        elif measure == 'R-squared':
+            gen_centroid = np.mean(cat_activations[model], axis = (0,1)) # shape (nb_features)
+            cat_centroids = np.mean(cat_activations[model], axis = (1)) # shape (nb_categories, nb_features)
+            #dist_centroids2center = np.sum((cat_centroids - gen_centroid)**2, axis = -1) # square radius
+            #gen_radius = np.amax(dist_centroids2center)
+            gen_radius = np.mean(np.sum((cat_activations[model] - gen_centroid)**2, axis = 2)) # square radius
+            cat_radius = np.mean(np.sum((cat_activations[model].transpose(1, 0, 2) - cat_centroids)**2, axis = 2),0) # square radius
+            compact = 1-cat_radius/gen_radius
 
-            compact = intra_vars / inter_vars
+        elif measure == 'R-squared_adjusted':
+            cat_centroids = np.mean(cat_activations[model], axis = (1)) # shape (nb_categories, nb_features)
+
+            intra_dist_matrix = np.mean(euclidean_distances(cat_centroids, cat_centroids, squared=True), axis = 0)
+
+            cat_radius = np.mean(np.sum((cat_activations[model].transpose(1, 0, 2) - cat_centroids)**2, axis = 2),0) # square radius
+            compact = 1-cat_radius/intra_dist_matrix
 
         # Sort and store results
         sort_indices = np.argsort(compact)
@@ -174,14 +278,14 @@ def max_compactness_difference(compact_categories, compactness, listcat, models 
     elif compactness_diff_measure == 'normalizedDiff':
         compactness0 = compactness[models[0]] - np.mean(compactness[models[0]]) # center compactness
         compactness1 = compactness[models[1]] - np.mean(compactness[models[1]])
-        compactness0 = compactness0/np.max(compactness0)
-        compactness1 = compactness1/np.max(compactness1)
+        compactness0 = compactness0 / np.max(np.absolute(compactness0))
+        compactness1 = compactness1 / np.max(np.absolute(compactness1))
 
         diff = compactness1 - compactness0 # distance in terms of compactness
 
     indexes = np.argsort(-np.absolute(diff))
     sortedmaxdiffcats = np.array(listcat)[indexes]
-    maxdiffs = diff[indexes]
+    maxdiffs = diff[indexes] # if diff is positive, compactness measure is higher in model2,so model1 is actually more compact
     print(nb_considered_categories)
     print(f'The {nb_considered_categories} categories leading to the max differences between {models[0]} and {models[1]} are {sortedmaxdiffcats[:nb_considered_categories]}')
     print(f'Category numbers are {indexes[:nb_considered_categories]}')
@@ -460,14 +564,19 @@ def find_subsimilar_subset(cat_activations, submodels, categories, images_per_su
                             metric=dissimilarity_metric, display=False)
     RDM2 = rsa.compute_RDMs(cat_activations_subset2.reshape(cat_shape[0] * cat_shape[1], -1),
                             metric=dissimilarity_metric, display=False)
-    RDM1_centered = RDM1 - np.mean(RDM1)
-    RDM2_centered = RDM2 - np.mean(RDM2)
+
+    # exclude diagonal
+    RDM1_short = np.array([np.delete(RDM1[i], i) for i in range(len(RDM1))]).transpose()
+    RDM2_short = np.array([np.delete(RDM2[i], i) for i in range(len(RDM2))]).transpose()
+    #center
+    RDM1_centered = RDM1_short - np.mean(RDM1_short)
+    RDM2_centered = RDM2_short - np.mean(RDM2_short)
 
     RDM1_centered = RDM1_centered / np.sqrt(np.sum(RDM1_centered ** 2, axis = 0))
     RDM2_centered = RDM2_centered / np.sqrt(np.sum(RDM2_centered ** 2, axis = 0))
 
     correlations = np.sum(RDM1_centered * RDM2_centered, axis=0)
-    category_correlations = correlations.reshape(nb_categories, -1)
+    #category_correlations = correlations.reshape(nb_categories, -1)
 
     # Initialize arrays for sorted results
     correlations_sorted = np.zeros(len(RDM1))
@@ -604,8 +713,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import os
 
-def display_low_similarity_images(image_paths, indices_vectorized, compactness_values, n_images=40,
-                                 grid_cols=8, figsize=(20, 10), save_path=None):
+def display_low_similarity_images(image_paths, indices_vectorized, compactness_values, n_images=40, figsize=(20, 7), save_path=None):
     """
     Load and display the first n images corresponding to lowest similarity indices.
 
@@ -632,8 +740,9 @@ def display_low_similarity_images(image_paths, indices_vectorized, compactness_v
         List of valid image paths that were successfully loaded
     """
 
+    n_categories = len(compactness_values)
+    nb_images_per_category = n_images // n_categories
 
-    nb_images_per_category = n_images // len(compactness_values)
     # Get the indices for the first n_images with lowest similarity
     low_similarity_indices = indices_vectorized[:n_images]
 
@@ -680,6 +789,7 @@ def display_low_similarity_images(image_paths, indices_vectorized, compactness_v
 
     # Calculate grid dimensions
     n_loaded = len(loaded_images)
+    grid_cols = n_categories
     grid_rows = (n_loaded + grid_cols - 1) // grid_cols
 
     # Create figure and display images
@@ -692,8 +802,8 @@ def display_low_similarity_images(image_paths, indices_vectorized, compactness_v
         axes = axes.reshape(1, -1)
 
     for i in range(grid_rows * grid_cols):
-        row = i // grid_cols
-        col = i % grid_cols
+        col = i // grid_rows
+        row = i % grid_rows
         ax = axes[row, col]
 
         if i < len(loaded_images):
@@ -701,7 +811,7 @@ def display_low_similarity_images(image_paths, indices_vectorized, compactness_v
             ax.imshow(loaded_images[i])
 
             category_value = compactness_values[i//nb_images_per_category] # add borders to categories with low compactness for model 1
-            if category_value is not None and category_value < 0:
+            '''if category_value is not None and category_value < 0:
                 #print('Border added')
                 # Turn on axis to show border
                 ax.axis('on')
@@ -713,15 +823,13 @@ def display_low_similarity_images(image_paths, indices_vectorized, compactness_v
                 ax.set_xticks([])
                 ax.set_yticks([])
             else:
-                ax.axis('off')
+                ax.axis('off')'''
 
-            # Add title with original index and filename
-            filename = Path(valid_paths[i]).name
-            label = valid_paths[i].split('/')[-2]
-            ax.set_title(f'Label: {label }\n{filename[:20]}...',
-                        fontsize=8, pad=2)
+        if row == 0:
+            label = valid_paths[i].split('/')[-2].split('_')[1]
+            ax.set_title(f'{label}', fontsize=19)
 
-        #ax.axis('off')
+        ax.axis('off')
 
     plt.tight_layout()
 
@@ -733,3 +841,93 @@ def display_low_similarity_images(image_paths, indices_vectorized, compactness_v
     plt.show()
 
     return loaded_images, valid_paths
+
+
+
+def subsimilar_categories(cat_activations, submodels, dissimilarity_metric = 'L2squared', similarity_metric = 'pearson', nb_subcategories = 12):
+    assert len(submodels)== 2
+    assert cat_activations[submodels[0]].shape[:2] == cat_activations[submodels[1]].shape[:2]
+
+    shape = cat_activations[submodels[0]].shape
+
+    nb_categories = shape[0]
+    nb_per_categories = shape[1]
+
+    mean_cat_activations1 = cat_activations[submodels[0]].mean(axis = 1)
+    mean_cat_activations2 = cat_activations[submodels[1]].mean(axis = 1)
+
+    RDM1 = rsa.compute_RDMs(mean_cat_activations1,
+                            metric=dissimilarity_metric, display=False)
+    RDM2 = rsa.compute_RDMs(mean_cat_activations2,
+                            metric=dissimilarity_metric, display=False)
+
+    # exclude diagonal
+    RDM1_short = np.array([np.delete(RDM1[i], i) for i in range(len(RDM1))]).transpose()
+    RDM2_short = np.array([np.delete(RDM2[i], i) for i in range(len(RDM2))]).transpose()
+    #center
+    RDM1_centered = RDM1_short - np.mean(RDM1_short)
+    RDM2_centered = RDM2_short - np.mean(RDM2_short)
+
+    #RDM1_centered = RDM1_short
+    #RDM2_centered = RDM2_short
+
+    RDM1_centered = RDM1_centered / np.sqrt(np.sum(RDM1_centered ** 2, axis = 0))
+    RDM2_centered = RDM2_centered / np.sqrt(np.sum(RDM2_centered ** 2, axis = 0))
+
+    correlations = np.sum(RDM1_centered * RDM2_centered, axis=0)
+    subsimiliar_categories = np.argsort(correlations)[:nb_subcategories]
+
+
+    return correlations, subsimiliar_categories
+
+
+def sample_rdm_pairs(RDM1, RDM2, n_samples=100000, subset_size=40,
+                                    batch_size=10000, seed=None):
+    """
+    Memory-efficient version that processes in batches and optionally saves to disk.
+
+    Parameters:
+    -----------
+    batch_size : int
+        Number of samples to process at once (default: 1000)
+    output_file : str, optional
+        If provided, saves results to this file using pickle
+    """
+
+    if seed is not None:
+        np.random.seed(seed)
+
+    n_images = RDM1.shape[0]
+    n_batches = (n_samples + batch_size - 1) // batch_size
+
+    all_sims_samples = []
+    all_indices = []
+    print(f"Processing {n_samples} samples in {n_batches} batches of {batch_size}...")
+
+    for batch_idx in tqdm(range(n_batches)):
+        start_idx = batch_idx * batch_size
+        end_idx = min(start_idx + batch_size, n_samples)
+        current_batch_size = end_idx - start_idx
+
+        # Allocate batch arrays
+        batch_sim = np.zeros((current_batch_size))
+        batch_indices = np.zeros((current_batch_size, subset_size), dtype=int)
+
+        for i in range(current_batch_size):
+            # Randomly select images
+            indices = np.random.choice(n_images, size=subset_size, replace=False)
+            indices = np.sort(indices)
+
+            # Extract submatrices
+            batch_sim[i] = rsa.Compute_sim_RDMs(RDM1[np.ix_(indices, indices)], RDM2[np.ix_(indices, indices)], center = False, metric = 'pearson' )
+            batch_indices[i] = indices
+
+        all_sims_samples.append(batch_sim)
+        all_indices.append(batch_indices)
+
+    # Concatenate all batches
+    sim_samples = np.concatenate(all_sims_samples, axis=0)
+    indices_used = np.concatenate(all_indices, axis=0)
+
+
+    return sim_samples, indices_used

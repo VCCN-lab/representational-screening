@@ -1,8 +1,7 @@
 import numpy as np
-import cv2
+
 from matplotlib import pyplot as plt
-from os.path import join
-import os
+
 import seaborn as sns
 
 
@@ -86,7 +85,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 def tsne_from_dissimilarity_matrix(dissimilarity_matrix, labels, size = 92,
-                                 perplexity=30, n_iter=1000, random_state=42):
+                                 perplexity=50, n_iter=1000, random_state=42):
     """
     Create t-SNE visualization from dissimilarity matrix
 
@@ -102,7 +101,10 @@ def tsne_from_dissimilarity_matrix(dissimilarity_matrix, labels, size = 92,
     assert dissimilarity_matrix.shape == (size, size), f"Matrix must be {size}x {size}"
     assert len(labels) == size, "Must have 100 labels"
 
-
+    if size >100:
+        perplexity = 50
+    else:
+        perplexity = 30
     # Run t-SNE with precomputed distances
     tsne = TSNE(n_components=2,
                 metric='precomputed',
@@ -116,7 +118,7 @@ def tsne_from_dissimilarity_matrix(dissimilarity_matrix, labels, size = 92,
 
     return tsne_results
 
-def plot_tsne_results(tsne_results, labels, figsize=(4.5, 3),
+def plot_tsne_results(tsne_results, labels,  figsize=(8, 5),
                      title="t-SNE Visualization of Image Dissimilarity"):
     """
     Plot t-SNE results with colored labels
@@ -130,10 +132,10 @@ def plot_tsne_results(tsne_results, labels, figsize=(4.5, 3),
     plt.figure(figsize=figsize)
 
     # Create scatter plot
-    cmap = 'autumn'
+    cmap = 'hsv'
     scatter = plt.scatter(tsne_results[:, 0], tsne_results[:, 1],
                          c=label_encoded, cmap=cmap,
-                         alpha=0.7, s=50)
+                         alpha=0.5, s=0.01)
 
     # Add labels and title
     plt.title(title, fontsize=16, fontweight='bold')
@@ -141,14 +143,14 @@ def plot_tsne_results(tsne_results, labels, figsize=(4.5, 3),
     plt.ylabel('t-SNE Component 2', fontsize=12)
 
     # Add legend
-    handles = [plt.Line2D([0], [0], marker='o', color='w',
-                         markerfacecolor=scatter.cmap(scatter.norm(i)),
-                         markersize=8, label=unique_labels[i])
-               for i in range(len(unique_labels))]
-    plt.legend(handles=handles, bbox_to_anchor=(1.05, 1), loc='upper left')
+    #handles = [plt.Line2D([0], [0], marker='o', color='w',
+    #                     markerfacecolor=scatter.cmap(scatter.norm(i)),
+    #                     markersize=8, label=unique_labels[i])
+    #           for i in range(len(unique_labels))]
+    #plt.legend(handles=handles, bbox_to_anchor=(1.05, 1), loc='upper left')
 
     # Add grid
-    plt.grid(True, alpha=0.3)
+    #plt.grid(True, alpha=0.3)
     plt.tight_layout()
 
     return plt.gcf()
@@ -203,10 +205,89 @@ def complete_tsne_pipeline(dissimilarity_matrix, labels, title):
 
     # Plot results
     fig = plot_tsne_results(tsne_results, labels, title = title)
-    plt.show()
+    #plt.show()
 
     # Analyze clusters
     analyze_clusters(tsne_results, labels)
 
 
-    return tsne_results, labels
+    return tsne_results, labels, fig
+
+def model_comparison_tsne_pipeline(RDM1, RDM2, labels, title):
+    """
+    Complete example with synthetic data
+    """
+
+    print("Running t-SNE on dissimilarity matrix...")
+    size = len(labels)
+    # Run t-SNE
+    tsne_results1 = tsne_from_dissimilarity_matrix(RDM1, labels, size = size)
+    tsne_results2 = tsne_from_dissimilarity_matrix(RDM2, labels, size = size)
+
+    # Plot results
+    fig = plot_tsne_comparison(tsne_results1, tsne_results2, labels, title = title)
+    #plt.show()
+
+    # Analyze clusters
+    #analyze_clusters(tsne_results, labels)
+
+
+    return [tsne_results1, tsne_results2], labels, fig
+
+def plot_tsne_comparison(tsne_results1, tsne_results2, labels,  figsize=(9.2, 4),
+                     title="t-SNE Visualization of Image Dissimilarity"):
+    """
+    Plot t-SNE results with colored labels
+    """
+    # Encode labels to numbers for coloring
+    unique_labels = []
+    seen = set()
+    for label in labels:
+        if label not in seen:
+            unique_labels.append(label)
+            seen.add(label)
+
+    # Create mapping that preserves order
+    label_to_idx = {label: i for i, label in enumerate(unique_labels)}
+    label_encoded = np.array([label_to_idx[label] for label in labels])
+
+    with plt.style.context('default'):
+
+        # Create figure
+        fig, subs = plt.subplots(1,2,sharex=False, sharey=True, figsize = figsize)
+
+        # Create scatter plot
+        cmap = 'hsv'
+        if tsne_results1.shape[0] > 10000:
+            size = 1
+        elif tsne_results1.shape[0] > 100:
+            size = 50
+        else:
+            size = 100
+        subs[0].scatter(tsne_results1[:, 0], tsne_results1[:, 1],
+                             c=label_encoded, cmap=cmap,
+                             alpha=0.7, s=size)
+        scatter = subs[1].scatter(tsne_results2[:, 0], tsne_results2[:, 1],
+                             c=label_encoded, cmap=cmap,
+                             alpha=0.7, s=size)
+
+        # Add labels and title
+        fig.suptitle(title, fontsize=16, fontweight='bold')
+        subs[0].set_xlabel('t-SNE Component 1', fontsize=12)
+        subs[1].set_xlabel('t-SNE Component 1', fontsize=12)
+        subs[0].set_ylabel('t-SNE Component 2', fontsize=12)
+
+
+        if tsne_results1.shape[0] < 100:
+            # Add legend
+            handles = [plt.Line2D([0], [0], marker='o', color='w',
+                                 markerfacecolor=scatter.cmap(scatter.norm(i)),
+                                 markersize=8, label=unique_labels[i])
+                       for i in range(len(unique_labels))]
+            plt.legend(handles=handles, bbox_to_anchor=(1.05, 1), loc='upper left')
+
+        # Add grid
+        #plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+
+    return plt.gcf()

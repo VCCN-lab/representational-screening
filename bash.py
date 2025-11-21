@@ -26,7 +26,7 @@ for model in ['resnet']:#['ego', 'saycam', 'imagenet', 'supervised', 'random']:
         args = shlex.split(command)
         subprocess.call(args)'''
 
-
+'''
 ### Run stimuli selection algorithm
 models = ['ego', 'saycam', 'imagenet', 'supervised', 'resnet']
 #models = ['ego', 'saycam']
@@ -55,4 +55,13 @@ for dataset in ['ecoVal', 'imagenetVal']:
                     '--compactness_diff_measure', compactness_diff_measure,
                     '--similarity_measure', similarity,
                 ]
-                subprocess.call(args)
+                subprocess.call(args)'''
+
+
+### Run the compactness metric search
+
+for arch in ['vgg', 'resnet', 'ohran']:
+    for metric in ['R-squared_adjusted', 'R-squared']:
+        command = f"python3 compactness_search.py --arch {arch} --dataset genLOC2 --metric {metric}" # if want to use a GPU
+        args = shlex.split(command)
+        subprocess.call(args)
