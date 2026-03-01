@@ -1,10 +1,10 @@
-# A repository for the represenational screening framework to stimuli curation
+# A repository for the representational screening framework to stimuli curation
 
 This is a stand-alone repository to facilitate the use of our recently developped representational screening approach for curating stimuli.  
 It first has comes with the purpose of exposing divergences between two models, but also to enable interpretable, and theory-driven behavioral and neuroimaging experiments.
 
 The approach is in two stages:
- - First: 
+ - First: We apply a screening procedure to select an arbitrarily small set of categories (default 12) that .
  - Second: We apply a screening procedure to select a small set of stimuli that maximize divergence between models, quantified using a compactness metric derived from model representational geometries. Code to run the screening algorithm is made available below.
 
 Our approach can be applied to any pair of deep vision models. We tested multiple comparisons, and found that the approach reliably yielded interpretable and experiment ready “controversial” images that exposed differences in model representations. 
@@ -36,6 +36,9 @@ In the same directory need to be saved the images used when saving the activatio
 
 ### Running the screening algorithm
 
+The screening method can be found in representational_screening,py.  
+To run it with the desired parameters, check out bash.py and modify accordingly.  
+Then run bash.py
 
 ### Running some analysis
 
