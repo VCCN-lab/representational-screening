@@ -2,66 +2,19 @@ import subprocess
 import shlex
 import os
 
-'''
-### Save activations for RSA on specific datasets
-for model in ['ego', 'saycam', 'random', 'imagenet', 's', 'a', 'y']:
-#for model in ['supervised']:
-    for dataset in ['MEG_face_stim', '100_faces', 'hmIT_stimuli', '100_objects']:
-    #for dataset in ['MEG_face_stim']:
-        gpu = 7
-        # command = f"python3 save_activations.py --model {model} --dataset {dataset}" # if don't specify GPU
-        command = f"python3 save_activations.py --model {model} --dataset {dataset} --cuda --gpuid {gpu}" # if want to use a GPU
-        args = shlex.split(command)
-        subprocess.call(args)'''
 
-'''
-### Save activations for datadriven approach
-for model in ['resnet']:#['ego', 'saycam', 'imagenet', 'supervised', 'random']:
-#for model in ['supervised']:
-    for dataset in ['ecoVal']:
-    #for dataset in ['MEG_face_stim']:
-        gpu = 0
-        # command = f"python3 save_activations.py --model {model} --dataset {dataset}" # if don't specify GPU
-        command = f"python3 save_activations_datadriven.py --model {model} --dataset {dataset} --cuda --gpuid {gpu}" # if want to use a GPU
-        args = shlex.split(command)
-        subprocess.call(args)'''
+### Run screening
+path2activations = 'data/activations/'
+model1 = 'places365'
+model2 = 'imagenet'
+metric = 'R-squared'
+path2dataset = 'data/dataset/'
+xpname = f'{model1}_{model2}'
+nb_subcategories = 12
+nb_exemplars = 4
 
-'''
-### Run stimuli selection algorithm
-models = ['ego', 'saycam', 'imagenet', 'supervised', 'resnet']
-#models = ['ego', 'saycam']
-for dataset in ['ecoVal', 'imagenetVal']:
-    for compactness_measure in ['Fisher_discriminant', 'silhouette_score']:
-        for compactness_diff_measure in ['rank', 'normalizedDiff']:
-            for similarity in ['pearson', 'contrast']:
-                args = [
-                    'python3', 'compactness_stimuli_selection.py',
-                    '--models', *models,
-                    '--dataset', dataset,
-                    '--normalize',
-                    '--compactness_measure', compactness_measure,
-                    '--nb_considered_categories', str(12),
-                    '--compactness_diff_measure', compactness_diff_measure,
-                    '--similarity_measure', similarity,
-                ]
-                subprocess.call(args)
-                ### without normalization
-                args = [
-                    'python3', 'compactness_stimuli_selection.py',
-                    '--models', *models,
-                    '--dataset', dataset,
-                    '--compactness_measure', compactness_measure,
-                    '--nb_considered_categories', str(12),
-                    '--compactness_diff_measure', compactness_diff_measure,
-                    '--similarity_measure', similarity,
-                ]
-                subprocess.call(args)'''
-
-
-### Run the compactness metric search
-
-for arch in ['vgg', 'resnet', 'ohran']:
-    for metric in ['R-squared_adjusted', 'R-squared']:
-        command = f"python3 compactness_search.py --arch {arch} --dataset genLOC2 --metric {metric}" # if want to use a GPU
-        args = shlex.split(command)
-        subprocess.call(args)
+command = (f"python3 representational_screening.py --path2activations {path2activations}\
+ --model1 {model1} --model2 {model2} --metric {metric} --path2dataset {path2dataset}\
+  --xpname {xpname} --nb_subcategories {nb_subcategories} --nb_exemplars {nb_exemplars}")
+args = shlex.split(command)
+subprocess.call(args)

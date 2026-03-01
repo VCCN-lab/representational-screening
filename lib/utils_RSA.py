@@ -57,7 +57,7 @@ def similarity_L2norm(vectors, squared = False, normalize=False):
     return euclidean_distances(vectors , squared= squared) # We use sklear instead of scipy coz for large matrices it is much wafaster!
 
 
-def compute_RDMs(activations, metric = 'pearson', display = True, title = '', torch = True):
+def compute_RDMs(activations, metric = 'L2squared', display = False, title = '', torch = True):
 
     '''
     activations should have shape (nb_images, nb_features)

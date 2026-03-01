@@ -192,8 +192,6 @@ def compute_compactness(cat_activations, models, listcat, measure = 'Fisher_disc
         elif measure == 'R-squared':
             gen_centroid = np.mean(cat_activations[model], axis = (0,1)) # shape (nb_features)
             cat_centroids = np.mean(cat_activations[model], axis = (1)) # shape (nb_categories, nb_features)
-            #dist_centroids2center = np.sum((cat_centroids - gen_centroid)**2, axis = -1) # square radius
-            #gen_radius = np.amax(dist_centroids2center)
             gen_radius = np.mean(np.sum((cat_activations[model] - gen_centroid)**2, axis = 2)) # square radius
             cat_radius = np.mean(np.sum((cat_activations[model].transpose(1, 0, 2) - cat_centroids)**2, axis = 2),0) # square radius
             compact = 1-cat_radius/gen_radius
@@ -550,6 +548,43 @@ def check_list_similarity(list1, list2):
     proportion = (len(common_elements) / max(len(set1), len(set2))) * 100 if max(len(set1), len(set2)) > 0 else 0
     return proportion
 
+def subsimilar_categories(cat_activations, submodels, dissimilarity_metric = 'L2squared', similarity_metric = 'pearson', nb_subcategories = 12):
+    assert len(submodels)== 2
+    assert cat_activations[submodels[0]].shape[:2] == cat_activations[submodels[1]].shape[:2]
+
+    shape = cat_activations[submodels[0]].shape
+
+    nb_categories = shape[0]
+    nb_per_categories = shape[1]
+
+    mean_cat_activations1 = cat_activations[submodels[0]].mean(axis = 1)
+    mean_cat_activations2 = cat_activations[submodels[1]].mean(axis = 1)
+
+    RDM1 = rsa.compute_RDMs(mean_cat_activations1,
+                            metric=dissimilarity_metric, display=False)
+    RDM2 = rsa.compute_RDMs(mean_cat_activations2,
+                            metric=dissimilarity_metric, display=False)
+
+    # exclude diagonal
+    RDM1_short = np.array([np.delete(RDM1[i], i) for i in range(len(RDM1))]).transpose()
+    RDM2_short = np.array([np.delete(RDM2[i], i) for i in range(len(RDM2))]).transpose()
+    #center
+    RDM1_centered = RDM1_short - np.mean(RDM1_short)
+    RDM2_centered = RDM2_short - np.mean(RDM2_short)
+
+    #RDM1_centered = RDM1_short
+    #RDM2_centered = RDM2_short
+
+    RDM1_centered = RDM1_centered / np.sqrt(np.sum(RDM1_centered ** 2, axis = 0))
+    RDM2_centered = RDM2_centered / np.sqrt(np.sum(RDM2_centered ** 2, axis = 0))
+
+    correlations = np.sum(RDM1_centered * RDM2_centered, axis=0)
+    subsimiliar_categories = np.argsort(correlations)[:nb_subcategories]
+
+
+    return correlations, subsimiliar_categories
+
+
 
 def find_subsimilar_subset(cat_activations, submodels, categories, images_per_subset=4, nb_per_category=50):
     nb_categories = len(categories)
@@ -611,6 +646,65 @@ def find_subsimilar_subset(cat_activations, submodels, categories, images_per_su
     RDM2_sorted = RDM2[np.ix_(sort_indices, sort_indices)]
 
     return RDM1, RDM2, RDM1_sorted, RDM2_sorted, np.array(sort_indices_global).flatten()
+
+def sample_catrdm_pairs(cat_activations, submodels, n_samples=1000, nb_subcategories=12, nb_per_category = 50,
+                                    batch_size=10, seed=None):
+    """
+    Memory-efficient version that processes in batches and optionally saves to disk.
+
+    Parameters:
+    -----------
+    batch_size : int
+        Number of samples to process at once (default: 1000)
+    output_file : str, optional
+        If provided, saves results to this file using pickle
+    """
+
+    if seed is not None:
+        np.random.seed(seed)
+
+    dissimilarity_metric = 'L2squared'
+
+    nb_categories = len(cat_activations[submodels[0]])
+    n_batches = (n_samples + batch_size - 1) // batch_size
+
+    all_sims_samples = []
+    all_indices = []
+    print(f"Processing {n_samples} samples in {n_batches} batches of {batch_size}...")
+
+    batch_rdms = {}
+    for batch_idx in tqdm(range(n_batches)):
+        start_idx = batch_idx * batch_size
+        end_idx = min(start_idx + batch_size, n_samples)
+        current_batch_size = end_idx - start_idx
+
+        subset_size = nb_subcategories
+        # Allocate batch arrays
+        batch_sim = np.zeros((current_batch_size))
+        batch_indices = np.zeros((current_batch_size, subset_size), dtype=int)
+        for model in submodels:
+            batch_rdms[model] = np.zeros((current_batch_size, nb_subcategories*nb_per_category, nb_subcategories*nb_per_category))
+        for i in range(current_batch_size):
+            # Randomly select images
+            cat_indices = np.random.choice(nb_categories, size=nb_subcategories, replace=False)
+
+            # Compute subrdms
+            for model in submodels:
+                batch_rdms[model][i] = rsa.compute_RDMs(cat_activations[model][cat_indices].reshape(nb_subcategories*nb_per_category, -1),
+                            metric=dissimilarity_metric, display=False)
+            # Extract submatrices
+            batch_sim[i] = rsa.Compute_sim_RDMs(batch_rdms[submodels[0]][i], batch_rdms[submodels[1]][i], center = False, metric = 'pearson' )
+            batch_indices[i] = cat_indices
+
+        all_sims_samples.append(batch_sim)
+        all_indices.append(batch_indices)
+
+    # Concatenate all batches
+    sim_samples = np.concatenate(all_sims_samples, axis=0)
+    indices_used = np.concatenate(all_indices, axis=0)
+
+
+    return sim_samples, indices_used
 
 def analyze_selected_images(results, categories):
     """
@@ -712,6 +806,88 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 import os
+
+def get_low_similarity_images(image_paths, indices_vectorized, compactness_values, n_images=40, save_path=None):
+    """
+    Load and display the first n images corresponding to lowest similarity indices.
+
+    Parameters:
+    -----------
+    image_paths : list
+        List of image file paths matching the RDM column indices
+    indices_vectorized : numpy.ndarray
+        Column indices sorted from lowest to highest similarity
+    n_images : int
+        Number of images to display (default: 40)
+    grid_cols : int
+        Number of columns in the display grid (default: 8)
+    figsize : tuple
+        Figure size for matplotlib (default: (20, 10))
+    save_path : str, optional
+        Path to save the figure (if None, just display)
+
+    Returns:
+    --------
+    loaded_images : list
+        List of loaded images (as numpy arrays)
+    valid_paths : list
+        List of valid image paths that were successfully loaded
+    """
+
+    n_categories = len(compactness_values)
+    nb_images_per_category = n_images // n_categories
+
+    # Get the indices for the first n_images with lowest similarity
+    low_similarity_indices = indices_vectorized[:n_images]
+
+    # Get corresponding image paths
+    selected_paths = [image_paths[idx] for idx in low_similarity_indices]
+
+    loaded_images = []
+    valid_paths = []
+    valid_indices = []
+
+    print(f"Loading {n_images} images with lowest RDM column similarity...")
+
+    # Load images
+    for i, (path, orig_idx) in enumerate(zip(selected_paths, low_similarity_indices)):
+        try:
+            # Check if file exists
+            if not os.path.exists(path):
+                print(f"Warning: File not found: {path}")
+                continue
+
+            # Load image with cv2
+            img = cv2.imread(path)
+
+            if img is None:
+                print(f"Warning: Could not load image: {path}")
+                continue
+
+            # Convert BGR to RGB for matplotlib display
+            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+            loaded_images.append(img_rgb)
+            valid_paths.append(path)
+            valid_indices.append(orig_idx)
+
+        except Exception as e:
+            print(f"Error loading {path}: {e}")
+            continue
+
+    print(f"Successfully loaded {len(loaded_images)} out of {n_images} requested images")
+
+    if len(loaded_images) == 0:
+        print("No images could be loaded!")
+        return [], []
+
+    # Calculate grid dimensions
+    n_loaded = len(loaded_images)
+    grid_cols = n_categories
+    grid_rows = (n_loaded + grid_cols - 1) // grid_cols
+
+
+    return loaded_images, valid_paths
 
 def display_low_similarity_images(image_paths, indices_vectorized, compactness_values, n_images=40, figsize=(20, 7), save_path=None):
     """
@@ -835,11 +1011,12 @@ def display_low_similarity_images(image_paths, indices_vectorized, compactness_v
 
     # Save or show
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.savefig(save_path + '/subset.png', dpi=150, bbox_inches='tight')
         print(f"Figure saved to: {save_path}")
 
-    plt.show()
-
+    import json
+    with open(save_path + '/stimulipaths.json', 'w') as f:
+        json.dump(valid_paths, f, indent=4)
     return loaded_images, valid_paths
 
 
@@ -881,7 +1058,7 @@ def subsimilar_categories(cat_activations, submodels, dissimilarity_metric = 'L2
     return correlations, subsimiliar_categories
 
 
-def sample_rdm_pairs(RDM1, RDM2, n_samples=100000, subset_size=40,
+def sample_rdm_pairs_RDMs(RDM1, RDM2, n_samples=100000, subset_size=40,
                                     batch_size=10000, seed=None):
     """
     Memory-efficient version that processes in batches and optionally saves to disk.
@@ -920,6 +1097,62 @@ def sample_rdm_pairs(RDM1, RDM2, n_samples=100000, subset_size=40,
 
             # Extract submatrices
             batch_sim[i] = rsa.Compute_sim_RDMs(RDM1[np.ix_(indices, indices)], RDM2[np.ix_(indices, indices)], center = False, metric = 'pearson' )
+            batch_indices[i] = indices
+
+        all_sims_samples.append(batch_sim)
+        all_indices.append(batch_indices)
+
+    # Concatenate all batches
+    sim_samples = np.concatenate(all_sims_samples, axis=0)
+    indices_used = np.concatenate(all_indices, axis=0)
+
+
+    return sim_samples, indices_used
+
+def sample_rdm_pairs(activations, submodels, n_samples=100000, subset_size=40,
+                                    batch_size=10000, seed=None):
+    """
+    Memory-efficient version that processes in batches and optionally saves to disk.
+
+    Parameters:
+    -----------
+    batch_size : int
+        Number of samples to process at once (default: 1000)
+    output_file : str, optional
+        If provided, saves results to this file using pickle
+    """
+
+    if seed is not None:
+        np.random.seed(seed)
+
+    activations1 = activations[submodels[0]]
+    activations2 = activations[submodels[1]]
+
+    n_images = activations1.shape[0]
+    n_batches = (n_samples + batch_size - 1) // batch_size
+
+    all_sims_samples = []
+    all_indices = []
+    print(f"Processing {n_samples} samples in {n_batches} batches of {batch_size}...")
+
+    for batch_idx in tqdm(range(n_batches)):
+        start_idx = batch_idx * batch_size
+        end_idx = min(start_idx + batch_size, n_samples)
+        current_batch_size = end_idx - start_idx
+
+        # Allocate batch arrays
+        batch_sim = np.zeros((current_batch_size))
+        batch_indices = np.zeros((current_batch_size, subset_size), dtype=int)
+
+        for i in range(current_batch_size):
+            # Randomly select images
+            indices = np.random.choice(n_images, size=subset_size, replace=False)
+            indices = np.sort(indices)
+
+            # Extract submatrices
+            RDM1 = rsa.compute_RDMs(activations1[indices] )
+            RDM2 = rsa.compute_RDMs(activations2[indices] )
+            batch_sim[i] = rsa.Compute_sim_RDMs(RDM1, RDM2, center = False, metric = 'pearson' )
             batch_indices[i] = indices
 
         all_sims_samples.append(batch_sim)

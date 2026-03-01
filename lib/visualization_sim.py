@@ -254,22 +254,25 @@ def plot_tsne_comparison(tsne_results1, tsne_results2, labels,  figsize=(9.2, 4)
     with plt.style.context('default'):
 
         # Create figure
-        fig, subs = plt.subplots(1,2,sharex=False, sharey=True, figsize = figsize)
+        fig, subs = plt.subplots(1,2,sharex=False, sharey=False, figsize = figsize)
 
         # Create scatter plot
-        cmap = 'hsv'
+        cmap = 'tab20'
         if tsne_results1.shape[0] > 10000:
-            size = 1
+            size = 2
+            alpha = 0.6
         elif tsne_results1.shape[0] > 100:
             size = 50
+            alpha = 0.7
         else:
             size = 100
+            alpha = 0.9
         subs[0].scatter(tsne_results1[:, 0], tsne_results1[:, 1],
                              c=label_encoded, cmap=cmap,
-                             alpha=0.7, s=size)
+                             alpha=alpha, s=size)
         scatter = subs[1].scatter(tsne_results2[:, 0], tsne_results2[:, 1],
                              c=label_encoded, cmap=cmap,
-                             alpha=0.7, s=size)
+                             alpha=alpha, s=size)
 
         # Add labels and title
         fig.suptitle(title, fontsize=16, fontweight='bold')
