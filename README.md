@@ -48,7 +48,7 @@ To run further analysis, such as the kind found in the paper, we also provide th
 
 The results used for presentation come from the comparison between a ResNet trained on places365 and a ResNet trained on ImageNet.
 It is the same analysis we used to generate the following figure:
-<img src="Results_1.png" width="750" height="400">
+<img src="Results_1.png" width="750" height="500">
 
 
 
