@@ -5,7 +5,8 @@ The resulting stimuli help expose divergences between models, but also enable in
 
 The approach is in two stages:
  - First: We apply a screening procedure to select an arbitrarily small set of categories (default 12) that are found to be represented differently in two models.
- - Second: We apply a screening procedure to select a small set of stimuli that maximize divergence between models, quantified using a compactness metric derived from model representational geometries. Code to run the screening algorithm is made available below.  
+ - Second: We apply a screening procedure to select a small set of stimuli that maximize divergence between models, quantified using a compactness metric derived from model representational geometries. Code to run the screening algorithm is made available below.
+
 <img src="Methods_schematic.png" width="750" height="300">
 
 Our approach can be applied to any pair of deep vision models. We tested multiple comparisons, and found that the approach reliably yielded interpretable and experiment ready “controversial” images that exposed differences in model representations. 
@@ -48,6 +49,7 @@ To run further analysis, such as the kind found in the paper, we also provide th
 
 The results used for presentation come from the comparison between a ResNet trained on places365 and a ResNet trained on ImageNet.
 It is the same analysis we used to generate the following figure:
+
 <img src="Results_1.png" width="750" height="500">
 
 
