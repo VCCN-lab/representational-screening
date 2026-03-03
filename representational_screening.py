@@ -1,14 +1,7 @@
-import importlib
-import numpy as np
-import sklearn
-from matplotlib import pyplot as plt
 from os.path import join
 import os
-import seaborn as sns
-from torchvision.ops.misc import interpolate
-from tqdm import tqdm
 
-#### Custum libraries
+#### Custom libraries
 import lib.algos_maxRSA as max_rsa
 import lib.utils_RSA as rsa
 
@@ -143,10 +136,15 @@ cats_correlations_compact = np.array(listcat)[np.argsort(-score)]
 
 #### screen examplars
 print('Screening exemplars')
-RDM1, RDM2, RDM1_sorted, RDM2_sorted, sorted_indices_corr_compact = max_rsa.find_subsimilar_subset(cat_activations, models, indexes_corr_compact[:nb_subcategories],  images_per_subset = opt.nb_exemplars, nb_per_category = nb_per_cat)
-sim = rsa.Compute_sim_RDMs(RDM1_sorted, RDM2_sorted, metric = 'pearson')
+catRDM1, catRDM2, RDM1, RDM2, sorted_indices_corr_compact = max_rsa.find_subsimilar_subset(cat_activations, models, indexes_corr_compact[:nb_subcategories],  images_per_subset = opt.nb_exemplars, nb_per_category = nb_per_cat)
+sim = rsa.Compute_sim_RDMs(RDM1, RDM2, metric = 'pearson')
 print(f'Final similarity between the two models is {sim}')
+np.save(f'results/{opt.xpname}/catRDM_{opt.model1}.npy', catRDM1)
+np.save(f'results/{opt.xpname}/catRDM_{opt.model2}.npy', catRDM2)
+np.save(f'results/{opt.xpname}/RDM_{opt.model1}.npy', RDM1)
+np.save(f'results/{opt.xpname}/RDM_{opt.model2}.npy', RDM2)
 
 #### Looking at selections
-imagelist = [img.replace('/raid/leonard_vandyck/datasets/genloc/raw_v1', opt.path2dataset) for img in imagelist]
-images, imagepaths = max_rsa.display_low_similarity_images(imagelist, sorted_indices_corr_compact, maxdiffs[:nb_seleted_categories], n_images=nb_subcategories*opt.nb_exemplars, save_path=f'results/{opt.xpname}')
+imagelist = [img.replace('/raid/leonard_vandyck/datasets/genloc/raw_v1/', opt.path2dataset) for img in imagelist]
+print(imagelist[:10])
+images, imagepaths = max_rsa.display_low_similarity_images(imagelist, sorted_indices_corr_compact, maxdiffs[:nb_seleted_categories], n_images=nb_subcategories*opt.nb_exemplars, save_path=f'figures/{opt.xpname}/subsets/')

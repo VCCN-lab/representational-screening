@@ -1015,6 +1015,7 @@ def display_low_similarity_images(image_paths, indices_vectorized, compactness_v
         print(f"Figure saved to: {save_path}")
 
     import json
+    print(valid_paths[:5])
     with open(save_path + '/stimulipaths.json', 'w') as f:
         json.dump(valid_paths, f, indent=4)
     return loaded_images, valid_paths

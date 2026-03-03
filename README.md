@@ -1,11 +1,12 @@
 # A repository for the representational screening framework to stimuli curation
 
 This is a stand-alone repository to facilitate the use of our recently developped representational screening approach for curating stimuli.  
-It first has comes with the purpose of exposing divergences between two models, but also to enable interpretable, and theory-driven behavioral and neuroimaging experiments.
+The resulting stimuli help expose divergences between models, but also enable interpretable, and theory-driven behavioral and neuroimaging experiments.
 
 The approach is in two stages:
- - First: We apply a screening procedure to select an arbitrarily small set of categories (default 12) that .
- - Second: We apply a screening procedure to select a small set of stimuli that maximize divergence between models, quantified using a compactness metric derived from model representational geometries. Code to run the screening algorithm is made available below.
+ - First: We apply a screening procedure to select an arbitrarily small set of categories (default 12) that are found to be represented differently in two models.
+ - Second: We apply a screening procedure to select a small set of stimuli that maximize divergence between models, quantified using a compactness metric derived from model representational geometries. Code to run the screening algorithm is made available below.  
+<img src="Methods_schematic.png" width="750" height="300">
 
 Our approach can be applied to any pair of deep vision models. We tested multiple comparisons, and found that the approach reliably yielded interpretable and experiment ready “controversial” images that exposed differences in model representations. 
 
@@ -41,6 +42,9 @@ To run it with the desired parameters, check out bash.py and modify accordingly.
 Then run bash.py
 
 ### Running some analysis
+
+representational screening.py ouputs the final curated stimuli and the resulting 2 RDMs with their similarity.
+To run further analysis, such as the kind found in the paper, we also provide the notebook analysis.ipynb
 
 
 
