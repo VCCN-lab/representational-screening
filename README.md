@@ -46,6 +46,10 @@ Then run bash.py
 representational screening.py ouputs the final curated stimuli and the resulting 2 RDMs with their similarity.
 To run further analysis, such as the kind found in the paper, we also provide the notebook analysis.ipynb
 
+The results used for presentation come from the comparison between a ResNet trained on places365 and a ResNet trained on ImageNet.
+It is the same analysis we used to generate the following figure:
+<img src="Results_1.png" width="750" height="300">
+
 
 
 
