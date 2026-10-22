@@ -1,0 +1,325 @@
+/* Custom CSS for clipness Documentation with RTD Theme */
+
+/* Import RTD theme base styles */
+@import url("theme.css");
+
+/* Custom color scheme - matching VCCN-lab projects */
+:root {
+    --clip-primary: #FCC388;
+    --clip-secondary: #51517F;
+    --clip-accent: #ee8e77;
+    --clip-light: #F4EDD7;
+}
+
+/* Header/navigation bar styling */
+.wy-nav-top {
+    background-color: var(--clip-secondary) !important;
+}
+
+/* Sidebar styling */
+.wy-side-nav-search {
+    background-color: var(--clip-secondary) !important;
+}
+
+.wy-side-nav-search>a {
+    color: #ffffff;
+    font-size: 1.3em;
+    font-weight: 600;
+}
+
+/* Active navigation items */
+.wy-menu-vertical li.current>a {
+    border-right: 3px solid var(--clip-primary) !important;
+    background-color: #e8eaf6 !important;
+}
+
+.wy-menu-vertical a:hover {
+    background-color: #ede7f6 !important;
+}
+
+/* Links */
+a {
+    color: var(--clip-accent);
+}
+
+a:hover {
+    color: var(--clip-accent);
+}
+
+/* Buttons */
+.btn {
+    background-color: var(--clip-primary) !important;
+    border-color: var(--clip-primary) !important;
+}
+
+.btn:hover {
+    background-color: var(--clip-accent) !important;
+    border-color: var(--clip-accent) !important;
+}
+
+/* Card styling for sphinx-design */
+.sd-card {
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.sd-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(94, 53, 177, 0.15) !important;
+}
+
+.sd-card-header {
+    background-color: var(--clip-light) !important;
+    border-bottom: 2px solid var(--clip-primary) !important;
+    font-weight: 600;
+}
+
+/* Code blocks */
+.highlight {
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+}
+
+pre {
+    background-color: #fafafa !important;
+    border-radius: 6px;
+    padding: 1em !important;
+}
+
+code {
+    background-color: #f5f5f5;
+    color: #5e35b1;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+/* Headings */
+h1 {
+    color: var(--clip-secondary);
+    border-bottom: 3px solid var(--clip-primary);
+    padding-bottom: 0.3em;
+    margin-top: 1.5em;
+}
+
+h2 {
+    color: var(--clip-secondary);
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 0.2em;
+    margin-top: 1.3em;
+}
+
+h3 {
+    color: var(--clip-primary);
+    margin-top: 1.2em;
+}
+
+/* Admonitions */
+.admonition {
+    border-radius: 6px;
+    border-left: 4px solid var(--clip-primary);
+}
+
+.admonition.note {
+    background-color: #e3f2fd;
+    border-left-color: #2196f3;
+}
+
+.admonition.warning {
+    background-color: #fff3e0;
+    border-left-color: #ff9800;
+}
+
+.admonition.tip {
+    background-color: #e8f5e9;
+    border-left-color: #4caf50;
+}
+
+.admonition-title {
+    font-weight: 600;
+    background-color: transparent;
+}
+
+/* Tables */
+.wy-table-responsive table {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+}
+
+.wy-table-responsive table th {
+    background-color: var(--clip-secondary) !important;
+    color: white !important;
+}
+
+.wy-table-responsive table td {
+    border-color: #e0e0e0;
+}
+
+/* Copy button styling */
+.copybtn {
+    position: absolute;
+    top: 0.3em;
+    right: 0.3em;
+    opacity: 0.3;
+    transition: opacity 0.3s, border 0.3s, background-color 0.3s;
+    user-select: none;
+    padding: 0;
+    border: none;
+}
+
+.copybtn:hover {
+    opacity: 1;
+}
+
+.copybtn:focus {
+    opacity: 1;
+    outline: 1px solid var(--clip-primary);
+}
+
+.highlight {
+    position: relative;
+}
+
+.copybtn>img {
+    height: 1.2em;
+    width: 1.2em;
+}
+
+/* Grid improvements */
+.sd-container-fluid {
+    padding: 0;
+}
+
+/* Footer */
+.wy-nav-content-wrap {
+    background-color: #ffffff;
+}
+
+footer {
+    color: #666;
+}
+
+/* Improve readability */
+.wy-nav-content {
+    max-width: 1200px;
+    padding: 1.618em 3.236em;
+}
+
+/* Logo sizing */
+.wy-side-nav-search .wy-dropdown>a img.logo,
+.wy-side-nav-search>a img.logo {
+    width: 200px;
+    margin: 0.618em auto;
+}
+
+/* Version badge */
+.wy-side-nav-search>div.version {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9em;
+}
+
+/* Search box styling */
+.wy-side-nav-search input[type="text"] {
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* TOC tree improvements */
+.wy-menu-vertical li.toctree-l1>a {
+    font-weight: 500;
+    font-size: 1.05em;
+}
+
+.wy-menu-vertical li.toctree-l2>a {
+    padding-left: 2em;
+}
+
+.wy-menu-vertical li.toctree-l3>a {
+    padding-left: 3em;
+}
+
+/* Badges and labels */
+.badge,
+.label {
+    background-color: var(--clip-primary);
+    border-radius: 4px;
+}
+
+/* Responsive improvements */
+@media screen and (max-width: 768px) {
+    .wy-nav-content {
+        padding: 1.618em 1em;
+    }
+
+    .sd-card {
+        margin-bottom: 1em;
+    }
+}
+
+/* Print styles */
+@media print {
+
+    .wy-nav-side,
+    .wy-nav-top,
+    .rst-versions {
+        display: none;
+    }
+
+    .wy-nav-content-wrap {
+        margin-left: 0;
+    }
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Navigation/Pagination buttons styling */
+.wy-nav-content .rst-footer-buttons {
+    margin-top: 2em;
+    padding-top: 2em;
+    border-top: 1px solid #e0e0e0;
+}
+
+.wy-nav-content .rst-footer-buttons .btn {
+    background-color: var(--clip-primary) !important;
+    color: white !important;
+    border: 2px solid var(--clip-primary) !important;
+    border-radius: 6px !important;
+    padding: 0.75em 1.5em !important;
+    font-weight: 600 !important;
+    font-size: 1em !important;
+    text-decoration: none !important;
+    display: inline-block !important;
+    transition: all 0.3s ease !important;
+}
+
+.wy-nav-content .rst-footer-buttons .btn:hover {
+    background-color: var(--clip-accent) !important;
+    border-color: var(--clip-accent) !important;
+    color: white !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(94, 53, 177, 0.3) !important;
+}
+
+.wy-nav-content .rst-footer-buttons .btn-neutral {
+    background-color: #f8f9fa !important;
+    color: var(--clip-secondary) !important;
+    border-color: #dee2e6 !important;
+}
+
+.wy-nav-content .rst-footer-buttons .btn-neutral:hover {
+    background-color: #e9ecef !important;
+    color: var(--clip-primary) !important;
+    border-color: var(--clip-primary) !important;
+}
+
+/* Focus styles for accessibility */
+a:focus,
+button:focus,
+input:focus {
+    outline: 2px solid var(--clip-primary);
+    outline-offset: 2px;
+}

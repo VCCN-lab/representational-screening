@@ -1,21 +1,73 @@
-# File extensions
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Package build
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+test_results.txt
+
+# Documentation
+docs/_build/
+docs/build/
+docs/source/gen_modules/
+docs/source/generated/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Container images
+*.sif
+
+# Model checkpoints and large arrays
 *.pt
 *.pth
 *.ckpt
-*.tar
-*.npz
-*.sh
-*.out
-*.tif
-*.mat
-*.png
 *.npy
+*.npz
+*.mat
+*.pkl
 
-# Directories
-**/__pycache__/
-y_imgs/
-fids/
-venv/
+# Archives
+*.tar
+*.tar.gz
+*.gz
+*.zip
+
+# The committed examples gallery ships the downloadable archives
+# sphinx-gallery generates alongside each example page.
+!docs/source/auto_examples/**/*.zip
+!docs/source/auto_examples/*.zip
+
+# Data and run outputs
+/data/
+/cache/
+/results/
+figures/
 outputs_visualization/
-testsets/
-data/
+
+# prevent unwanted AI things
+.claude/*

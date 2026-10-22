@@ -1,57 +1,143 @@
-# A repository for the representational screening framework to stimuli curation
+# repscreen: model-guided stimulus curation
 
-This is a stand-alone repository to facilitate the use of our recently developped representational screening approach for curating stimuli.  
-The resulting stimuli help expose divergences between models, but also enable interpretable, and theory-driven behavioral and neuroimaging experiments.
+[![tests](https://img.shields.io/github/actions/workflow/status/PeerHerholz/representational-screening/.github%2Fworkflows%2Ftests.yml?branch=main&style=plastic)](https://github.com/PeerHerholz/representational-screening/actions)
+[![license](https://img.shields.io/github/license/PeerHerholz/representational-screening.svg)](https://github.com/PeerHerholz/representational-screening/blob/main/LICENSE)
 
-The approach is in two stages:
- - First: We apply a screening procedure to select an arbitrarily small set of categories (default 12) that are found to be represented differently in two models.
- - Second: We apply a screening procedure to select a small set of stimuli that maximize divergence between models, quantified using a compactness metric derived from model representational geometries. Code to run the screening algorithm is made available below.
+`repscreen` curates stimuli that expose where two deep vision models
+disagree. Given each model's activations over a large,
+category-structured image set, it selects a small set of categories
+the two models represent differently, then selects the exemplars
+within those categories that maximise the divergence, quantified from
+the models' representational geometries.
 
-<img src="Methods_schematic.png" width="750" height="300">
+The resulting stimuli are few enough to run in a behavioural or
+neuroimaging experiment while still separating the models, which makes
+the comparison interpretable and theory-driven rather than a single
+aggregate similarity score.
 
-Our approach can be applied to any pair of deep vision models. We tested multiple comparisons, and found that the approach reliably yielded interpretable and experiment ready “controversial” images that exposed differences in model representations. 
+<img src="docs/source/_static/Methods_schematic.png" width="750" height="300">
 
-Collaborators: Leonard van Dyck, Alban Flachot (shared first authorship) and Katharina Dobs.
+Collaborators: Leonard van Dyck, Alban Flachot (shared first
+authorship) and Katharina Dobs.
 
-Van Dyck, L., Flachot, A. and Dobs, K. (in preparation) Model-guided stimulus curation for comparing artificial and biological vision.
+Van Dyck, L., Flachot, A. and Dobs, K. (in preparation) Model-guided
+stimulus curation for comparing artificial and biological vision.
 
-## Requirements:
+## Installation
 
-requirements.txt
+```bash
+git clone https://github.com/PeerHerholz/representational-screening.git
+cd representational-screening
+uv pip install -e .
+```
 
-## GenSet: a stimulus pool 
+Optional extras: `".[dev]"` for the test and lint tools, `".[docs]"`
+for the documentation build.
 
-We generated a large-scale, category-structured image dataset (GenSet) using a latent diffusion model, balancing experimental control with natural appearance.  
-GenSet was based on the test set of EcoSet and includes 565 categories and 28250 images.  
-A link for downloading GenSet will be made upon acceptance.
+## Input layout
 
-## Representational screening
+`repscreen` starts from activations that are already saved, so the
+models themselves are never loaded. For each of the two models, record
+one activation vector per image, typically from the penultimate layer,
+and write them next to the image list they came from:
 
-We assume here that you have two sets of model representations ready, one for each model of interest.  
-In our case, the sets typically consisted of the set of activations in the penultimate layer of two models (e.g. ResNet) for the whole GenSet.  
-But the screening methods works for any dataset, as long as it can equally be divided into categories.
+```
+activations/
+  places365/
+    activations.npy     # shape (n_images, n_features)
+    imagepaths.txt      # one path per image, same order
+  imagenet/
+    activations.npy
+    imagepaths.txt
+```
 
-### Activations
+Both models must have seen the same images in the same order. The
+directory holding an image names its category, every category must
+contribute the same number of exemplars, and a category's images must
+form one contiguous block.
 
-Two sets of activations are required. Each are expected to be saved in data/ in a seperate directory, under the name of the corresponding model.  
-In the same directory need to be saved the images used when saving the activations, in order of presentation.
+## Usage
 
-### Running the screening algorithm
+From Python:
 
-The screening method can be found in representational_screening,py.  
-To run it with the desired parameters, check out bash.py and modify accordingly.  
-Then run bash.py
+```python
+from repscreen.config import (
+    ActivationConfig, OutputConfig, ScreeningConfig, SelectionConfig,
+)
+from repscreen.screening.pipeline import run_screening
 
-### Running some analysis
+config = ScreeningConfig(
+    activations=ActivationConfig(
+        activation_dir="data/activations",
+        models=("places365", "imagenet"),
+        dataset_path="data/dataset",
+    ),
+    selection=SelectionConfig(n_categories=12, n_exemplars=4),
+    output=OutputConfig(output_dir="results"),
+)
 
-representational screening.py ouputs the final curated stimuli and the resulting 2 RDMs with their similarity.
-To run further analysis, such as the kind found in the paper, we also provide the notebook analysis.ipynb
+result = run_screening(config)
+print(result.selected_category_names)
+print(result.similarity)
+```
 
-The results used for presentation come from the comparison between a ResNet trained on places365 and a ResNet trained on ImageNet.
-It is the same analysis we used to generate the following figure:
+Or from the command line:
 
-<img src="Results_1.png" width="750" height="500">
+```bash
+repscreen --activation-dir data/activations \
+          --models places365 imagenet \
+          --dataset-path data/dataset \
+          --output-dir results \
+          --figure-dir figures
+```
 
+`repscreen --help` lists every argument.
 
+## What it provides
 
+| Module | What it covers |
+| --- | --- |
+| `repscreen.config` | Validated configuration for a screening run |
+| `repscreen.data` | Loading paired activations and their category structure |
+| `repscreen.metrics` | Dissimilarity matrices, nine compactness measures, centred kernel alignment |
+| `repscreen.screening` | The category and exemplar stages, the pipeline, and null distributions |
+| `repscreen.output` | Writers for NumPy, JSON and CSV results |
+| `repscreen.plotting` | RDM pairs, compactness curves, t-SNE comparisons, stimulus grids |
+| `repscreen.signatures` | Per-category Fourier spectra and CIELab chromaticity |
+| `repscreen.cli` | The `repscreen` command |
 
+## GenSet: a stimulus pool
+
+We generated a large-scale, category-structured image dataset (GenSet)
+using a latent diffusion model, balancing experimental control with
+natural appearance. GenSet was based on the test set of EcoSet and
+includes 565 categories and 28250 images. A link for downloading
+GenSet will be made available upon acceptance.
+
+## Results
+
+The figure below comes from screening a ResNet trained on Places365
+against a ResNet trained on ImageNet, which is also the comparison the
+paper reports.
+
+<img src="docs/source/_static/Results_1.png" width="750" height="500">
+
+## Documentation
+
+The full documentation, including the examples gallery, is built with
+
+```bash
+uv pip install -e ".[docs]"
+cd docs && make clean html
+```
+
+## Development
+
+```bash
+uv run pytest                                      # tests
+uv run flake8 repscreen/ tests/ tools/ examples/   # style
+uv run codespell                                   # spelling
+cd docs && make clean html                         # docs
+```
+
+All four are run by GitHub Actions on every push and pull request.

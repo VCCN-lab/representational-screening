@@ -1,0 +1,4 @@
+[codespell]
+skip = ./.git,./docs/build,./docs/source/auto_examples,./uv.lock,./*.ipynb,./*.egg-info,./build,./dist,./.venv
+# Terms that appear in docstrings and comments and are intentional
+ignore-words-list = nin,arange,hist,ba,fo,te,som

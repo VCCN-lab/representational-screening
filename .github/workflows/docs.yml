@@ -1,0 +1,67 @@
+name: build the docs
+
+# The events/triggers when it should be run
+# Here we set that the workflow should run
+# whenever there was a push or PR to the
+# main branch
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# We define the jobs that should be run
+# and the respective runner, ie virtual machine
+# Here, the workflow runs on the latest ubuntu
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.13"]
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+
+    - name: Clean any cached Python files
+      run: |
+        find . -type d -name __pycache__ -exec rm -rf {} + || true
+        find . -name "*.pyc" -delete || true
+
+    - name: Install repscreen package in editable mode
+      run: |
+        uv pip install -e ".[docs]" --system
+
+    # The gallery under docs/source/auto_examples is committed and
+    # the build reuses it, so an example edited without a rebuild
+    # would render the previous figures and pass unnoticed.
+    - name: Check the committed gallery is current
+      run: |
+        python tools/check_gallery_freshness.py
+
+    # REPSCREEN_BUILD_GALLERY is left unset: the examples read model
+    # activations that are not distributed with the repository, so
+    # they are run locally and their output committed rather than
+    # executed here.
+    - name: Build the docs
+      run: |
+        cd docs && make clean html
+
+    - name: GitHub Pages action
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3.6.1
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs/build/html
+        commit_message: ${{ github.event.head_commit.message }}

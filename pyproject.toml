@@ -1,0 +1,137 @@
+[build-system]
+requires = ["setuptools>=68", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "repscreen"
+description = "Representational screening for model-guided stimulus curation"
+readme = "README.md"
+requires-python = ">=3.11,<3.15"
+license = {text = "MIT"}
+authors = [
+    {name = "Leonard van Dyck"},
+    {name = "Alban Flachot"},
+    {name = "Katharina Dobs"},
+]
+maintainers = [
+    {name = "Leonard van Dyck"},
+    {name = "Alban Flachot"},
+]
+keywords = [
+    "representational similarity analysis",
+    "stimulus curation",
+    "deep vision models",
+    "model comparison",
+    "compactness",
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "numpy>=1.20.0",
+    "scikit-learn>=1.2.0",
+    "matplotlib>=3.6.0",
+    "seaborn>=0.12.0",
+    "opencv-python-headless>=4.7.0",
+    "scikit-image>=0.20.0",
+    "scipy>=1.10.0",
+    "tqdm>=4.0.0",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-cov",
+    "coverage>=7.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "codespell>=2.2.0",
+]
+docs = [
+    "sphinx>=5.0.0",
+    "sphinx-rtd-theme>=1.2.0",
+    "numpydoc>=1.5.0",
+    "ipython",
+    "sphinx_copybutton",
+    "sphinx_design",
+    "sphinx-argparse",
+    "sphinx-gallery>=0.14.0",
+    "pandas>=2.0.0",
+]
+
+# Declared as dependency groups as well as extras so that "uv run"
+# finds the development tools without a flag: uv syncs the "dev"
+# group by default, while extras are installed only on request.  The
+# groups reference the extras above, so the dependency lists are not
+# duplicated.
+[dependency-groups]
+dev = ["repscreen[dev]"]
+docs = ["repscreen[docs]"]
+
+[project.urls]
+Homepage = "https://github.com/PeerHerholz/representational-screening"
+Documentation = "https://PeerHerholz.github.io/representational-screening"
+Repository = "https://github.com/PeerHerholz/representational-screening.git"
+Issues = "https://github.com/PeerHerholz/representational-screening/issues"
+
+[project.scripts]
+repscreen = "repscreen.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["repscreen*"]
+exclude = ["tests*", "docs*"]
+
+[tool.setuptools_scm]
+
+[tool.black]
+line-length = 79
+target-version = ['py311']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 79
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+pythonpath = ["."]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--disable-warnings",
+    "-p no:warnings",
+]
+markers = [
+    "slow: marks tests as slow",
+    "integration: marks tests reading image files from disk",
+    "unit: marks tests as unit tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::FutureWarning",
+]
+norecursedirs = [
+    ".git", ".tox", "dist", "build", "*.egg",
+    "__pycache__", ".pytest_cache", ".venv", "venv", "env",
+]
+console_output_style = "progress"
+doctest_optionflags = ["NORMALIZE_WHITESPACE", "ELLIPSIS"]
